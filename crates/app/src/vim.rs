@@ -61,46 +61,37 @@ impl VimStateMachine {
         }
     }
 
-    fn handle_normal(&mut self, key: &str, _shift: bool, ctrl: bool) -> VimAction {
+    fn handle_normal(&mut self, key: &str, shift: bool, ctrl: bool) -> VimAction {
         // Check ctrl+r first (Redo)
-        if ctrl && key == "r" {
+        if ctrl && (key == "r" || key == "R") {
             self.key_buffer.clear();
             return VimAction::Redo;
         }
 
+        // hjkl: shift = move selected element, no shift = move vim cursor
+        let key_lower = key.to_ascii_lowercase();
+        if matches!(key_lower.as_str(), "h" | "j" | "k" | "l") && !ctrl {
+            self.key_buffer.clear();
+            if shift {
+                return match key_lower.as_str() {
+                    "h" => VimAction::MoveSelected(-10.0, 0.0),
+                    "j" => VimAction::MoveSelected(0.0, 10.0),
+                    "k" => VimAction::MoveSelected(0.0, -10.0),
+                    "l" => VimAction::MoveSelected(10.0, 0.0),
+                    _ => unreachable!(),
+                };
+            } else {
+                return match key_lower.as_str() {
+                    "h" => VimAction::MoveCursor(-20.0, 0.0),
+                    "j" => VimAction::MoveCursor(0.0, 20.0),
+                    "k" => VimAction::MoveCursor(0.0, -20.0),
+                    "l" => VimAction::MoveCursor(20.0, 0.0),
+                    _ => unreachable!(),
+                };
+            }
+        }
+
         match key {
-            "H" => {
-                self.key_buffer.clear();
-                VimAction::MoveSelected(-10.0, 0.0)
-            }
-            "J" => {
-                self.key_buffer.clear();
-                VimAction::MoveSelected(0.0, 10.0)
-            }
-            "K" => {
-                self.key_buffer.clear();
-                VimAction::MoveSelected(0.0, -10.0)
-            }
-            "L" if !ctrl => {
-                self.key_buffer.clear();
-                VimAction::MoveSelected(10.0, 0.0)
-            }
-            "h" => {
-                self.key_buffer.clear();
-                VimAction::MoveCursor(-20.0, 0.0)
-            }
-            "j" => {
-                self.key_buffer.clear();
-                VimAction::MoveCursor(0.0, 20.0)
-            }
-            "k" => {
-                self.key_buffer.clear();
-                VimAction::MoveCursor(0.0, -20.0)
-            }
-            "l" => {
-                self.key_buffer.clear();
-                VimAction::MoveCursor(20.0, 0.0)
-            }
             " " => {
                 self.key_buffer.clear();
                 VimAction::SelectAtCursor
