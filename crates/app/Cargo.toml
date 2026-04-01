@@ -41,3 +41,4 @@ log = { workspace = true }
 wasm-logger = "0.2"
 wasm-bindgen-futures = "0.4"
 spacetimedb-client-api-messages = "2.1"
+spacetimedb-lib = { workspace = true }

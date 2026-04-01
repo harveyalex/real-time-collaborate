@@ -34,7 +34,7 @@ async function globalSetup() {
   });
 
   console.log('Publishing server module...');
-  execSync('spacetime publish collaborate crates/server --yes', {
+  execSync('spacetime publish -s local collaborate -p crates/server -c=on-conflict --yes', {
     cwd: PROJECT_ROOT,
     stdio: 'inherit',
   });

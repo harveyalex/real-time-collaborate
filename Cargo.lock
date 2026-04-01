@@ -68,6 +68,7 @@ dependencies = [
  "log",
  "shared",
  "spacetimedb-client-api-messages",
+ "spacetimedb-lib",
  "stdb-client",
  "wasm-bindgen",
  "wasm-bindgen-futures",

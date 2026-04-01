@@ -44,8 +44,11 @@ fn App() -> impl IntoView {
                     crate::sync::setup_event_handler(&conn, state.store.clone());
                     state.connection.set(Some(conn.clone()));
                     // Attempt to create the default room (fails gracefully if it exists).
-                    conn.call_reducer("create_room", vec![]);
-                    conn.subscribe_room(1);
+                    let room_args = spacetimedb_lib::bsatn::to_vec(&("default".to_string(),)).unwrap();
+                    conn.call_reducer("create_room", room_args);
+                    // Subscribe to all elements/cursors (no room filter) to
+                    // avoid a race where room_id isn't known yet.
+                    conn.subscribe_all();
                     state.store.current_room.set(Some(1));
                     log::info!("Connected to SpacetimeDB");
                 }

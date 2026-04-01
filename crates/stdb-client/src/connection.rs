@@ -152,7 +152,7 @@ impl StdbConnection {
     pub async fn connect(host: &str, db_name: &str) -> Result<Self, String> {
         // Build the WebSocket URI with the v2 BSATN subprotocol path.
         let uri = format!(
-            "{host}/database/subscribe/{db_name}?client_address=0000000000000000"
+            "{host}/v1/database/{db_name}/subscribe?compression=None"
         );
 
         log::info!("StdbConnection: connecting to {uri}");
@@ -239,6 +239,35 @@ impl StdbConnection {
     pub fn on_event(&self, callback: impl Fn(ServerEvent) + 'static) {
         let mut guard = self.inner.on_event.lock().unwrap();
         *guard = Some(Box::new(callback));
+    }
+
+    /// Subscribe to all rows in element, cursor, and room tables.
+    ///
+    /// This avoids a race condition where `subscribe_room(1)` is sent before
+    /// the room is actually created on the server.
+    pub fn subscribe_all(&self) -> QuerySetId {
+        let query_set_id = QuerySetId::new(
+            self.inner
+                .next_query_set_id
+                .fetch_add(1, Ordering::Relaxed),
+        );
+        let request_id = self.inner.next_request_id.fetch_add(1, Ordering::Relaxed);
+
+        let queries: Box<[Box<str>]> = vec![
+            "SELECT * FROM element".into(),
+            "SELECT * FROM cursor".into(),
+            "SELECT * FROM room".into(),
+        ]
+        .into();
+
+        let msg = ClientMessage::Subscribe(Subscribe {
+            request_id,
+            query_set_id,
+            query_strings: queries,
+        });
+
+        self.send_client_message(&msg);
+        query_set_id
     }
 
     /// Subscribe to SQL queries for a room.
