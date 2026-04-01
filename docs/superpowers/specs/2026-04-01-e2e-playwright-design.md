@@ -8,6 +8,17 @@ Automated Playwright tests that verify real-time collaboration between two brows
 
 **Non-goals:** Visual regression testing, performance benchmarking, offline mode testing.
 
+## Prerequisite: BSATN Row Decoding in sync.rs
+
+The current `sync.rs` event handler has stub TODOs for `SubscribeApplied` and `TransactionUpdate` — it logs events but does not decode BSATN row data into `ElementData`/`CursorData`. Without this, elements created in one browser will not appear in another's `store.elements` signal.
+
+**This plan must implement BSATN row decoding in `sync.rs` before the sync tests can pass.** Specifically:
+- Decode `BsatnRowList` rows from `SubscribeApplied` for the `element` and `cursor` tables
+- Decode row inserts/deletes from `TransactionUpdate` and apply them to `store.elements` / `store.cursors`
+- This requires matching on the table name string in the response and deserializing each row's BSATN bytes into the corresponding struct fields
+
+Additionally, a `__TEST_CURSOR_COUNT` window hook should be exposed alongside the element hooks to verify cursor presence.
+
 ## Test Infrastructure
 
 ### Directory Structure
@@ -59,13 +70,7 @@ In `crates/app/src/main.rs`, add a debug-only hook after `provide_context`:
 {
     use wasm_bindgen::prelude::*;
 
-    #[wasm_bindgen]
-    extern "C" {
-        #[wasm_bindgen(js_namespace = window, js_name = "__TEST_SET_HOOK")]
-        fn test_set_hook(name: &str, value: &JsValue);
-    }
-
-    // Expose element count and element IDs to window for Playwright
+    // Expose element count, element IDs, and cursor count to window for Playwright
     Effect::new({
         let store = state.store.clone();
         move || {
@@ -83,6 +88,14 @@ In `crates/app/src/main.rs`, add a debug-only hook after `provide_context`:
                 &js_sys::global(),
                 &JsValue::from_str("__TEST_ELEMENT_IDS"),
                 &js_ids,
+            ).ok();
+
+            let cursor_count = store.cursors.with(|c| c.len());
+            let js_cursor_count = JsValue::from_f64(cursor_count as f64);
+            js_sys::Reflect::set(
+                &js_sys::global(),
+                &JsValue::from_str("__TEST_CURSOR_COUNT"),
+                &js_cursor_count,
             ).ok();
         }
     });
@@ -117,7 +130,7 @@ async function waitForElementCount(page: Page, count: number, timeout = 10000) {
 ### 2. two-browser-sync.spec.ts
 
 - Open two browser contexts (A and B), both navigate to the app
-- Wait for both to show "Connected" in the top bar
+- Wait for both to show "connected" in the top bar (lowercase, matching UI)
 - In context A: press `r` to enter rectangle mode, click+drag to draw a rectangle
 - Wait for context A to show element count = 1
 - Wait for context B to show element count = 1 (synced via SpacetimeDB)
@@ -127,7 +140,7 @@ async function waitForElementCount(page: Page, count: number, timeout = 10000) {
 
 - Open two browser contexts, both connected
 - In context A: move mouse to a known canvas position
-- In context B: verify a cursor label appears (check for the cursor dot via test hook or screenshot)
+- In context B: wait for `__TEST_CURSOR_COUNT >= 1` (the remote cursor from context A)
 
 ### 4. delete-sync.spec.ts
 
