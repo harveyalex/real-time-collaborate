@@ -60,6 +60,30 @@ fn App() -> impl IntoView {
         });
     }
 
+    // Debug-only test hooks: expose element/cursor counts on window for Playwright
+    #[cfg(debug_assertions)]
+    {
+        let store = state.store.clone();
+        Effect::new(move |_| {
+            let elem_count = store.elements.with(|e| e.len());
+            let cursor_count = store.cursors.with(|c| c.len());
+
+            let global = js_sys::global();
+            js_sys::Reflect::set(
+                &global,
+                &wasm_bindgen::JsValue::from_str("__TEST_ELEMENT_COUNT"),
+                &wasm_bindgen::JsValue::from_f64(elem_count as f64),
+            )
+            .ok();
+            js_sys::Reflect::set(
+                &global,
+                &wasm_bindgen::JsValue::from_str("__TEST_CURSOR_COUNT"),
+                &wasm_bindgen::JsValue::from_f64(cursor_count as f64),
+            )
+            .ok();
+        });
+    }
+
     let vim = Rc::new(RefCell::new(VimStateMachine::new()));
     let state_for_keys = state.clone();
     let vim_clone = vim.clone();
