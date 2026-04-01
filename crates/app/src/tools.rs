@@ -341,7 +341,8 @@ fn hit_test_element(elem: &ElementData, wx: f64, wy: f64) -> bool {
 // Sync helper: call the create_element reducer on the server
 // ---------------------------------------------------------------------------
 
-fn sync_element_to_server(state: &AppState, elem: &ElementData) {
+/// Send element to server. Returns true if connected (element will arrive via subscription).
+fn sync_element_to_server(state: &AppState, elem: &ElementData) -> bool {
     let conn = state.connection.get_untracked();
     if let Some(conn) = conn {
         let points_bytes = shared::encode_points(&elem.points);
@@ -363,7 +364,9 @@ fn sync_element_to_server(state: &AppState, elem: &ElementData) {
         bsatn::to_writer(&mut args, &elem.text_content.clone()).unwrap();
         bsatn::to_writer(&mut args, &points_bytes).unwrap();
         conn.call_reducer("create_element", args);
+        return true;
     }
+    false
 }
 
 // ---------------------------------------------------------------------------
@@ -400,9 +403,7 @@ fn create_shape_element(state: &AppState, kind: ElementKind, x: f64, y: f64, w: 
         z_index: z,
     };
     sync_element_to_server(state, &elem);
-    state.store.elements.update(|elems| {
-        elems.insert(id, elem);
-    });
+    state.store.elements.update(|elems| { elems.insert(id, elem); });
     state.selected_ids.set(vec![id]);
 }
 
@@ -428,11 +429,11 @@ fn create_line_element(state: &AppState, kind: ElementKind, points: &[Point]) {
         text_content: String::new(),
         z_index: z,
     };
-    sync_element_to_server(state, &elem);
-    state.store.elements.update(|elems| {
-        elems.insert(id, elem);
-    });
-    state.selected_ids.set(vec![id]);
+    let synced = sync_element_to_server(state, &elem);
+    if !synced {
+        state.store.elements.update(|elems| { elems.insert(id, elem); });
+        state.selected_ids.set(vec![id]);
+    }
 }
 
 fn create_text_element(state: &AppState, x: f64, y: f64, text: &str) {
@@ -461,11 +462,11 @@ fn create_text_element(state: &AppState, x: f64, y: f64, text: &str) {
         text_content: text.to_string(),
         z_index: z,
     };
-    sync_element_to_server(state, &elem);
-    state.store.elements.update(|elems| {
-        elems.insert(id, elem);
-    });
-    state.selected_ids.set(vec![id]);
+    let synced = sync_element_to_server(state, &elem);
+    if !synced {
+        state.store.elements.update(|elems| { elems.insert(id, elem); });
+        state.selected_ids.set(vec![id]);
+    }
 }
 
 fn create_freehand_element(state: &AppState, points: &[Point]) {
@@ -490,9 +491,9 @@ fn create_freehand_element(state: &AppState, points: &[Point]) {
         text_content: String::new(),
         z_index: z,
     };
-    sync_element_to_server(state, &elem);
-    state.store.elements.update(|elems| {
-        elems.insert(id, elem);
-    });
-    state.selected_ids.set(vec![id]);
+    let synced = sync_element_to_server(state, &elem);
+    if !synced {
+        state.store.elements.update(|elems| { elems.insert(id, elem); });
+        state.selected_ids.set(vec![id]);
+    }
 }

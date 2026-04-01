@@ -299,12 +299,25 @@ pub fn DrawCanvas() -> impl IntoView {
 
     let state_move = state.clone();
     let tool_handler_move = tool_handler.clone();
+    let last_cursor_update = Rc::new(RefCell::new(0.0f64));
     let on_mousemove = move |ev: web_sys::MouseEvent| {
         let sx = ev.offset_x() as f64;
         let sy = ev.offset_y() as f64;
         state_move.mouse_pos.set((sx, sy));
         let (wx, wy) = state_move.screen_to_world(sx, sy);
         tool_handler_move.borrow_mut().on_mouse_move(&state_move, wx, wy);
+
+        // Throttled cursor update to server (~20fps = every 50ms)
+        let now = js_sys::Date::now();
+        let mut last = last_cursor_update.borrow_mut();
+        if now - *last > 50.0 {
+            *last = now;
+            if let Some(conn) = state_move.connection.get_untracked() {
+                let room_id = state_move.store.current_room.get_untracked().unwrap_or(1);
+                let args = spacetimedb_lib::bsatn::to_vec(&(room_id, wx, wy)).unwrap();
+                conn.call_reducer("update_cursor", args);
+            }
+        }
     };
 
     let state_up = state.clone();

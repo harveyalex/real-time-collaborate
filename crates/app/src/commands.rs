@@ -1,4 +1,4 @@
-use leptos::prelude::{Set, Update};
+use leptos::prelude::{GetUntracked, Set, Update};
 
 use crate::state::AppState;
 use crate::vim::VimAction;
@@ -15,8 +15,21 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
             log::debug!("Move selected by ({}, {})", dx, dy);
         }
         VimAction::DeleteSelected => {
-            // TODO: call delete_element reducer for each selected element
-            log::debug!("Delete selected");
+            let selected = state.selected_ids.get_untracked();
+            // Remove locally
+            state.store.elements.update(|elems| {
+                for id in &selected {
+                    elems.remove(id);
+                }
+            });
+            // Call server reducer
+            if let Some(conn) = state.connection.get_untracked() {
+                for id in &selected {
+                    let args = spacetimedb_lib::bsatn::to_vec(&(*id,)).unwrap();
+                    conn.call_reducer("delete_element", args);
+                }
+            }
+            state.selected_ids.update(|ids: &mut Vec<u64>| ids.clear());
         }
         VimAction::CopySelected => {
             // TODO: copy selected elements to clipboard signal
