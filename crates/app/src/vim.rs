@@ -5,6 +5,8 @@ pub enum VimAction {
     None,
     SetTool(Tool),
     MoveSelected(f64, f64),
+    MoveCursor(f64, f64),
+    SelectAtCursor,
     DeleteSelected,
     CopySelected,
     Paste,
@@ -59,31 +61,49 @@ impl VimStateMachine {
         }
     }
 
-    fn handle_normal(&mut self, key: &str, shift: bool, ctrl: bool) -> VimAction {
+    fn handle_normal(&mut self, key: &str, _shift: bool, ctrl: bool) -> VimAction {
         // Check ctrl+r first (Redo)
         if ctrl && key == "r" {
             self.key_buffer.clear();
             return VimAction::Redo;
         }
 
-        let step = if shift { 1.0_f64 } else { 10.0_f64 };
-
         match key {
+            "H" => {
+                self.key_buffer.clear();
+                VimAction::MoveSelected(-10.0, 0.0)
+            }
+            "J" => {
+                self.key_buffer.clear();
+                VimAction::MoveSelected(0.0, 10.0)
+            }
+            "K" => {
+                self.key_buffer.clear();
+                VimAction::MoveSelected(0.0, -10.0)
+            }
+            "L" if !ctrl => {
+                self.key_buffer.clear();
+                VimAction::MoveSelected(10.0, 0.0)
+            }
             "h" => {
                 self.key_buffer.clear();
-                VimAction::MoveSelected(-step, 0.0)
+                VimAction::MoveCursor(-20.0, 0.0)
             }
             "j" => {
                 self.key_buffer.clear();
-                VimAction::MoveSelected(0.0, step)
+                VimAction::MoveCursor(0.0, 20.0)
             }
             "k" => {
                 self.key_buffer.clear();
-                VimAction::MoveSelected(0.0, -step)
+                VimAction::MoveCursor(0.0, -20.0)
             }
             "l" => {
                 self.key_buffer.clear();
-                VimAction::MoveSelected(step, 0.0)
+                VimAction::MoveCursor(20.0, 0.0)
+            }
+            " " => {
+                self.key_buffer.clear();
+                VimAction::SelectAtCursor
             }
             "r" => {
                 // ctrl is false here (checked above)
@@ -101,12 +121,8 @@ impl VimStateMachine {
                 self.mode = VimMode::Insert;
                 VimAction::SetTool(Tool::Arrow)
             }
-            "L" => {
-                // shift+l sends key="L"
-                self.key_buffer.clear();
-                self.mode = VimMode::Insert;
-                VimAction::SetTool(Tool::Line)
-            }
+            // Note: "L" (shift+l) is now handled above as MoveSelected.
+            // Line tool can be accessed via command mode (:line) or other bindings.
             "t" => {
                 self.key_buffer.clear();
                 self.mode = VimMode::Insert;
@@ -283,16 +299,25 @@ mod tests {
     #[test]
     fn hjkl_movement() {
         let mut vim = VimStateMachine::new();
-        assert!(matches!(vim.handle_key("h", false, false), VimAction::MoveSelected(dx, _) if dx == -10.0));
-        assert!(matches!(vim.handle_key("j", false, false), VimAction::MoveSelected(_, dy) if dy == 10.0));
-        assert!(matches!(vim.handle_key("k", false, false), VimAction::MoveSelected(_, dy) if dy == -10.0));
-        assert!(matches!(vim.handle_key("l", false, false), VimAction::MoveSelected(dx, _) if dx == 10.0));
+        assert!(matches!(vim.handle_key("h", false, false), VimAction::MoveCursor(dx, _) if dx == -20.0));
+        assert!(matches!(vim.handle_key("j", false, false), VimAction::MoveCursor(_, dy) if dy == 20.0));
+        assert!(matches!(vim.handle_key("k", false, false), VimAction::MoveCursor(_, dy) if dy == -20.0));
+        assert!(matches!(vim.handle_key("l", false, false), VimAction::MoveCursor(dx, _) if dx == 20.0));
     }
 
     #[test]
-    fn shift_hjkl_fine_movement() {
+    fn shift_hjkl_move_selected() {
         let mut vim = VimStateMachine::new();
-        assert!(matches!(vim.handle_key("h", true, false), VimAction::MoveSelected(dx, _) if dx == -1.0));
+        assert!(matches!(vim.handle_key("H", true, false), VimAction::MoveSelected(dx, _) if dx == -10.0));
+        assert!(matches!(vim.handle_key("J", true, false), VimAction::MoveSelected(_, dy) if dy == 10.0));
+        assert!(matches!(vim.handle_key("K", true, false), VimAction::MoveSelected(_, dy) if dy == -10.0));
+        assert!(matches!(vim.handle_key("L", true, false), VimAction::MoveSelected(dx, _) if dx == 10.0));
+    }
+
+    #[test]
+    fn space_selects_at_cursor() {
+        let mut vim = VimStateMachine::new();
+        assert!(matches!(vim.handle_key(" ", false, false), VimAction::SelectAtCursor));
     }
 
     #[test]

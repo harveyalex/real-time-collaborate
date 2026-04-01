@@ -22,6 +22,21 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
             // TODO: call update_element reducer for each selected element
             log::debug!("Move selected by ({}, {})", dx, dy);
         }
+        VimAction::MoveCursor(dx, dy) => {
+            state.vim_cursor.update(|pos| {
+                pos.0 += dx;
+                pos.1 += dy;
+            });
+        }
+        VimAction::SelectAtCursor => {
+            let (cx, cy) = state.vim_cursor.get_untracked();
+            let hit = crate::tools::hit_test(state, cx, cy);
+            if let Some(id) = hit {
+                state.selected_ids.set(vec![id]);
+            } else {
+                state.selected_ids.set(vec![]);
+            }
+        }
         VimAction::DeleteSelected => {
             let selected = state.selected_ids.get_untracked();
             // Remove locally
@@ -107,8 +122,7 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
         }
         VimAction::CreateAtCenter => {
             let tool = state.tool.get_untracked();
-            let (cw, ch) = state.canvas_size.get_untracked();
-            let (cx, cy) = state.screen_to_world(cw / 2.0, ch / 2.0);
+            let (cx, cy) = state.vim_cursor.get_untracked();
             match tool {
                 Tool::Rectangle => {
                     create_shape_element(state, ElementKind::Rectangle, cx - 50.0, cy - 30.0, 100.0, 60.0);

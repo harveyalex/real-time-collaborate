@@ -211,6 +211,27 @@ fn render_frame(state: &AppState, ctx: &CanvasRenderingContext2d, width: f64, he
         }
     });
 
+    // Draw vim cursor crosshair.
+    let (vcx, vcy) = state.vim_cursor.get_untracked();
+    ctx.save();
+    ctx.set_stroke_style_str("rgba(110, 231, 183, 0.6)");
+    ctx.set_line_width(1.0);
+    // Horizontal line
+    ctx.begin_path();
+    ctx.move_to(vcx - 10.0, vcy);
+    ctx.line_to(vcx + 10.0, vcy);
+    ctx.stroke();
+    // Vertical line
+    ctx.begin_path();
+    ctx.move_to(vcx, vcy - 10.0);
+    ctx.line_to(vcx, vcy + 10.0);
+    ctx.stroke();
+    // Small circle
+    ctx.begin_path();
+    ctx.arc(vcx, vcy, 3.0, 0.0, std::f64::consts::TAU).unwrap();
+    ctx.stroke();
+    ctx.restore();
+
     ctx.restore();
 }
 

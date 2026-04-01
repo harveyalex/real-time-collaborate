@@ -46,6 +46,7 @@ pub struct AppState {
     pub show_help: RwSignal<bool>,
     pub tool_handler: Arc<Mutex<ToolHandler>>,
     pub clipboard: RwSignal<Vec<ElementData>>,
+    pub vim_cursor: RwSignal<(f64, f64)>,
 }
 
 impl AppState {
@@ -67,6 +68,7 @@ impl AppState {
             show_help: RwSignal::new(false),
             tool_handler: Arc::new(Mutex::new(ToolHandler::new())),
             clipboard: RwSignal::new(vec![]),
+            vim_cursor: RwSignal::new((400.0, 300.0)),
         }
     }
 

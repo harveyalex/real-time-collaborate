@@ -71,6 +71,7 @@ fn App() -> impl IntoView {
     {
         let store = state.store.clone();
         let sel = state.selected_ids;
+        let vim_cursor = state.vim_cursor;
         Effect::new(move |_| {
             let elem_count = store.elements.with(|e| e.len());
             let cursor_count = store.cursors.with(|c| c.len());
@@ -103,6 +104,15 @@ fn App() -> impl IntoView {
                 &global,
                 &wasm_bindgen::JsValue::from_str("__TEST_SELECTED_IDS"),
                 &wasm_bindgen::JsValue::from_str(&sel_json),
+            )
+            .ok();
+
+            let (vcx, vcy) = vim_cursor.with(|&(x, y)| (x, y));
+            let cursor_json = format!("{{\"x\":{},\"y\":{}}}", vcx, vcy);
+            js_sys::Reflect::set(
+                &global,
+                &wasm_bindgen::JsValue::from_str("__TEST_VIM_CURSOR"),
+                &wasm_bindgen::JsValue::from_str(&cursor_json),
             )
             .ok();
         });

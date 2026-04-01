@@ -287,7 +287,7 @@ impl ToolHandler {
 // ---------------------------------------------------------------------------
 
 /// Find the topmost element under (wx, wy). Returns its ID if found.
-fn hit_test(state: &AppState, wx: f64, wy: f64) -> Option<u64> {
+pub fn hit_test(state: &AppState, wx: f64, wy: f64) -> Option<u64> {
     let elements = state.store.sorted_elements();
     // Iterate in reverse (topmost z-index first).
     for elem in elements.iter().rev() {
