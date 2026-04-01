@@ -34,8 +34,20 @@ fn App() -> impl IntoView {
     {
         let state = state.clone();
         wasm_bindgen_futures::spawn_local(async move {
+            // Choose SpacetimeDB host based on current page location
+            let stdb_host = {
+                let location = web_sys::window().unwrap().location();
+                let hostname = location.hostname().unwrap_or_default();
+                if hostname == "localhost" || hostname == "127.0.0.1" {
+                    "ws://localhost:3000".to_string()
+                } else {
+                    "wss://maincloud.spacetimedb.com".to_string()
+                }
+            };
+            log::info!("Connecting to SpacetimeDB at {}", stdb_host);
+
             match stdb_client::connection::StdbConnection::connect(
-                "ws://localhost:3000",
+                &stdb_host,
                 "collaborate",
             )
             .await

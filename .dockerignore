@@ -1,0 +1,7 @@
+target/
+dist/
+.superpowers/
+tests/e2e/node_modules/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+crates/app/dist/
