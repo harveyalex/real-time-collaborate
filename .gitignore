@@ -2,3 +2,8 @@
 /dist
 *.wasm
 .superpowers/
+tests/e2e/node_modules/
+tests/e2e/dist/
+tests/e2e/.test-pids.json
+tests/e2e/test-results/
+tests/e2e/playwright-report/
