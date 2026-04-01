@@ -1,0 +1,22 @@
+[package]
+name = "service-worker"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+shared = { workspace = true }
+wasm-bindgen = { workspace = true }
+web-sys = { workspace = true, features = [
+    "ServiceWorkerGlobalScope",
+    "Cache",
+    "CacheStorage",
+    "Request",
+    "Response",
+    "FetchEvent",
+] }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

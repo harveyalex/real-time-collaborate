@@ -1,0 +1,8 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+spacetimedb-lib = { workspace = true, features = ["serde"] }
+serde = { workspace = true }

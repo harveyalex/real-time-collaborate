@@ -1,0 +1,24 @@
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { workspace = true }
+stdb-client = { path = "../stdb-client" }
+leptos = { workspace = true }
+web-sys = { workspace = true, features = [
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "MouseEvent",
+    "KeyboardEvent",
+    "WheelEvent",
+    "Window",
+    "Document",
+    "DomRect",
+] }
+wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
+console_error_panic_hook = "0.1"
+log = { workspace = true }
+wasm-logger = "0.2"
