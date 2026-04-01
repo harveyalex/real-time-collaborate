@@ -1,6 +1,8 @@
+mod types;
 mod state;
 mod canvas;
 mod ui;
+mod vim;
 
 use leptos::prelude::*;
 use state::AppState;

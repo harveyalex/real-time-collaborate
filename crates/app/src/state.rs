@@ -1,24 +1,7 @@
 use leptos::prelude::*;
 use stdb_client::StdbStore;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum VimMode {
-    Normal,
-    Insert,
-    Visual,
-    Command,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Tool {
-    Select,
-    Rectangle,
-    Ellipse,
-    Arrow,
-    Line,
-    Text,
-    Freehand,
-}
+pub use crate::types::{VimMode, Tool};
 
 #[derive(Clone, Debug)]
 pub struct Camera {
