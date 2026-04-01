@@ -5,10 +5,17 @@ edition = "2021"
 
 [dependencies]
 shared = { workspace = true }
-spacetimedb-sdk = { workspace = true, features = ["browser"] }
 spacetimedb-lib = { workspace = true }
 leptos = { workspace = true }
-web-sys = { workspace = true }
+web-sys = { workspace = true, features = ["console"] }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = "0.4"
 log = { workspace = true }
+tokio-tungstenite-wasm = "0.6"
+futures = "0.3"
+futures-channel = "0.3"
+bytes = "1"
+spacetimedb-client-api-messages = "2.1"
+spacetimedb-sats = "2.1"
+flate2 = "1"
+brotli = "3"
