@@ -97,6 +97,23 @@ pub fn setup_event_handler(conn: &StdbConnection, store: StdbStore) {
                                                 for row_bytes in &persistent.inserts {
                                                     match decode::decode_element(&row_bytes) {
                                                         Ok(Some(elem)) => {
+                                                            // Dedup: remove any local temp element that matches the
+                                                            // server element by (room_id, kind, x, y, width, height).
+                                                            let dup_key: Option<u64> = elems.iter()
+                                                                .find(|(&id, e)| {
+                                                                    id != elem.id
+                                                                        && e.room_id == elem.room_id
+                                                                        && std::mem::discriminant(&e.kind) == std::mem::discriminant(&elem.kind)
+                                                                        && e.x == elem.x
+                                                                        && e.y == elem.y
+                                                                        && e.width == elem.width
+                                                                        && e.height == elem.height
+                                                                })
+                                                                .map(|(&id, _)| id);
+                                                            if let Some(old_id) = dup_key {
+                                                                log::debug!("Dedup: removing temp element {} in favour of server element {}", old_id, elem.id);
+                                                                elems.remove(&old_id);
+                                                            }
                                                             elems.insert(elem.id, elem);
                                                         }
                                                         Ok(None) => {

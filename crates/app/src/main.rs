@@ -46,6 +46,9 @@ fn App() -> impl IntoView {
                     // Attempt to create the default room (fails gracefully if it exists).
                     let room_args = spacetimedb_lib::bsatn::to_vec(&("default".to_string(),)).unwrap();
                     conn.call_reducer("create_room", room_args);
+                    // Join the default room so the server creates a cursor row for us.
+                    let join_args = spacetimedb_lib::bsatn::to_vec(&(1u64, "User".to_string())).unwrap();
+                    conn.call_reducer("join_room", join_args);
                     // Subscribe to all elements/cursors (no room filter) to
                     // avoid a race where room_id isn't known yet.
                     conn.subscribe_all();
