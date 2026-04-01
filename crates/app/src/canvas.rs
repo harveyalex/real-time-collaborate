@@ -12,6 +12,7 @@ use shared::ElementKind;
 use stdb_client::ElementData;
 
 use crate::state::AppState;
+use crate::tools::ToolHandler;
 
 /// Convert a packed RGBA u32 to a CSS `rgba()` string.
 pub fn color_u32_to_css(color: u32) -> String {
@@ -220,9 +221,12 @@ pub fn DrawCanvas() -> impl IntoView {
     let state = expect_context::<AppState>();
     let canvas_ref = NodeRef::<html::Canvas>::new();
 
+    let tool_handler = Rc::new(RefCell::new(ToolHandler::new()));
+
     // Set up the render loop and event handlers once the canvas is mounted.
     Effect::new({
         let state = state.clone();
+        let tool_handler = tool_handler.clone();
         move |_| {
             let Some(canvas_el) = canvas_ref.get() else {
                 return;
@@ -253,9 +257,18 @@ pub fn DrawCanvas() -> impl IntoView {
             let f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
             let g = f.clone();
             let state_inner = state.clone();
+            let tool_handler_render = tool_handler.clone();
 
             *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
                 render_frame(&state_inner, &ctx, w, h);
+
+                // Render drawing preview (ghost shapes) within the camera transform.
+                ctx.save();
+                let cam = state_inner.camera.get_untracked();
+                ctx.scale(cam.zoom, cam.zoom).unwrap_or(());
+                ctx.translate(-cam.x, -cam.y).unwrap_or(());
+                tool_handler_render.borrow().render_preview(&ctx, &state_inner);
+                ctx.restore();
 
                 // Request next frame.
                 if let Some(win) = web_sys::window() {
@@ -278,20 +291,27 @@ pub fn DrawCanvas() -> impl IntoView {
 
     // Mouse event handlers.
     let state_mouse = state.clone();
+    let tool_handler_down = tool_handler.clone();
     let on_mousedown = move |ev: web_sys::MouseEvent| {
         let (wx, wy) = state_mouse.screen_to_world(ev.offset_x() as f64, ev.offset_y() as f64);
-        log::debug!("mousedown at world ({:.1}, {:.1})", wx, wy);
+        tool_handler_down.borrow_mut().on_mouse_down(&state_mouse, wx, wy);
     };
 
     let state_move = state.clone();
+    let tool_handler_move = tool_handler.clone();
     let on_mousemove = move |ev: web_sys::MouseEvent| {
         let sx = ev.offset_x() as f64;
         let sy = ev.offset_y() as f64;
         state_move.mouse_pos.set((sx, sy));
+        let (wx, wy) = state_move.screen_to_world(sx, sy);
+        tool_handler_move.borrow_mut().on_mouse_move(&state_move, wx, wy);
     };
 
-    let on_mouseup = move |_ev: web_sys::MouseEvent| {
-        log::debug!("mouseup");
+    let state_up = state.clone();
+    let tool_handler_up = tool_handler.clone();
+    let on_mouseup = move |ev: web_sys::MouseEvent| {
+        let (wx, wy) = state_up.screen_to_world(ev.offset_x() as f64, ev.offset_y() as f64);
+        tool_handler_up.borrow_mut().on_mouse_up(&state_up, wx, wy);
     };
 
     let state_wheel = state.clone();

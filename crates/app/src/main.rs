@@ -4,6 +4,7 @@ mod canvas;
 mod ui;
 mod vim;
 mod commands;
+mod tools;
 
 use leptos::prelude::*;
 use state::AppState;
