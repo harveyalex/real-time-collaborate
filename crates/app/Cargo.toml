@@ -39,3 +39,4 @@ js-sys = { workspace = true }
 console_error_panic_hook = "0.1"
 log = { workspace = true }
 wasm-logger = "0.2"
+wasm-bindgen-futures = "0.4"

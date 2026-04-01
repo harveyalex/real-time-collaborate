@@ -69,6 +69,7 @@ dependencies = [
  "shared",
  "stdb-client",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasm-logger",
  "web-sys",
 ]
@@ -2054,6 +2055,7 @@ dependencies = [
  "serde_json",
  "shared",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

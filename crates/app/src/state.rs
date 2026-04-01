@@ -1,5 +1,7 @@
 use leptos::prelude::*;
+use leptos::reactive::owner::LocalStorage;
 use stdb_client::StdbStore;
+use stdb_client::connection::StdbConnection;
 
 pub use crate::types::{VimMode, Tool};
 
@@ -24,6 +26,7 @@ impl Default for Camera {
 #[derive(Clone)]
 pub struct AppState {
     pub store: StdbStore,
+    pub connection: RwSignal<Option<StdbConnection>, LocalStorage>,
     pub mode: RwSignal<VimMode>,
     pub tool: RwSignal<Tool>,
     pub camera: RwSignal<Camera>,
@@ -41,6 +44,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             store: StdbStore::new(),
+            connection: RwSignal::new_local(None),
             mode: RwSignal::new(VimMode::Normal),
             tool: RwSignal::new(Tool::Select),
             camera: RwSignal::new(Camera::default()),

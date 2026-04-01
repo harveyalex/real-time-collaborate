@@ -6,6 +6,7 @@ mod vim;
 mod commands;
 mod tools;
 mod export;
+mod sync;
 
 use leptos::prelude::*;
 use state::AppState;
@@ -28,6 +29,36 @@ fn main() {
 fn App() -> impl IntoView {
     let state = AppState::new();
     provide_context(state.clone());
+
+    // Connect to SpacetimeDB in the background.
+    {
+        let state = state.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            match stdb_client::connection::StdbConnection::connect(
+                "ws://localhost:3000",
+                "collaborate",
+            )
+            .await
+            {
+                Ok(conn) => {
+                    crate::sync::setup_event_handler(&conn, state.store.clone());
+                    state.connection.set(Some(conn.clone()));
+                    // Attempt to create the default room (fails gracefully if it exists).
+                    conn.call_reducer("create_room", vec![]);
+                    conn.subscribe_room(1);
+                    state.store.current_room.set(Some(1));
+                    log::info!("Connected to SpacetimeDB");
+                }
+                Err(e) => {
+                    log::error!(
+                        "SpacetimeDB connection failed: {} — running in offline mode",
+                        e
+                    );
+                    // App still works locally without server.
+                }
+            }
+        });
+    }
 
     let vim = Rc::new(RefCell::new(VimStateMachine::new()));
     let state_for_keys = state.clone();
