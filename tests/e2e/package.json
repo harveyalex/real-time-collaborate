@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "test": "npx playwright test",
-    "test:headed": "npx playwright test --headed"
+    "test:headed": "npx playwright test --headed",
+    "test:fast": "npx playwright test --config playwright.fast.config.ts",
+    "test:fast:headed": "npx playwright test --config playwright.fast.config.ts --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
