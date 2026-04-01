@@ -24,6 +24,15 @@ web-sys = { workspace = true, features = [
     "Window",
     "Document",
     "DomRect",
+    "Blob",
+    "BlobPropertyBag",
+    "Url",
+    "HtmlAnchorElement",
+    "HtmlBodyElement",
+    "HtmlElement",
+    "Element",
+    "EventTarget",
+    "Node",
 ] }
 wasm-bindgen = { workspace = true }
 js-sys = { workspace = true }

@@ -57,12 +57,10 @@ fn handle_command(state: &AppState, cmd: &str) {
     let parts: Vec<&str> = cmd.trim().split_whitespace().collect();
     match parts.as_slice() {
         ["w"] => {
-            // TODO: export PNG
-            log::info!("Export PNG");
+            crate::export::export_png(state);
         }
         ["ws"] => {
-            // TODO: export SVG
-            log::info!("Export SVG");
+            crate::export::export_svg(state);
         }
         ["wq"] => {
             // TODO: export and close

@@ -5,6 +5,7 @@ mod ui;
 mod vim;
 mod commands;
 mod tools;
+mod export;
 
 use leptos::prelude::*;
 use state::AppState;
