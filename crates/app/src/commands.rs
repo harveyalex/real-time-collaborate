@@ -57,6 +57,9 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
             state.mode.set(crate::state::VimMode::Normal);
             state.selected_ids.update(|ids: &mut Vec<u64>| ids.clear());
         }
+        VimAction::ToggleHelp => {
+            state.show_help.update(|v| *v = !*v);
+        }
         VimAction::CommandChar(_) | VimAction::CommandBackspace => {
             // Command buffer is managed by VimStateMachine
         }

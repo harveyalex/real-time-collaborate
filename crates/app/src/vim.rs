@@ -16,6 +16,7 @@ pub enum VimAction {
     CommandChar(char),
     CommandSubmit(String),
     CommandBackspace,
+    ToggleHelp,
 }
 
 pub struct VimStateMachine {
@@ -149,6 +150,7 @@ impl VimStateMachine {
                 self.mode = VimMode::Command;
                 VimAction::EnterCommand
             }
+            "?" => VimAction::ToggleHelp,
             "Escape" => {
                 self.key_buffer.clear();
                 VimAction::ExitToNormal

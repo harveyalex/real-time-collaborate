@@ -38,6 +38,7 @@ pub struct AppState {
     pub stroke_width: RwSignal<f32>,
     pub mouse_pos: RwSignal<(f64, f64)>,
     pub canvas_size: RwSignal<(f64, f64)>,
+    pub show_help: RwSignal<bool>,
 }
 
 impl AppState {
@@ -56,6 +57,7 @@ impl AppState {
             stroke_width: RwSignal::new(shared::DEFAULT_STROKE_WIDTH),
             mouse_pos: RwSignal::new((0.0, 0.0)),
             canvas_size: RwSignal::new((0.0, 0.0)),
+            show_help: RwSignal::new(false),
         }
     }
 

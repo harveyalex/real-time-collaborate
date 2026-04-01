@@ -11,7 +11,7 @@ mod sync;
 use leptos::prelude::*;
 use state::AppState;
 use canvas::DrawCanvas;
-use ui::{TopBar, BottomBar};
+use ui::{TopBar, BottomBar, HelpOverlay};
 use crate::vim::VimStateMachine;
 use crate::commands::handle_vim_action;
 use std::cell::RefCell;
@@ -140,5 +140,6 @@ fn App() -> impl IntoView {
             </div>
             <BottomBar />
         </div>
+        <HelpOverlay />
     }
 }
