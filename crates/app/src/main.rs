@@ -41,7 +41,7 @@ fn App() -> impl IntoView {
             .await
             {
                 Ok(conn) => {
-                    crate::sync::setup_event_handler(&conn, state.store.clone());
+                    crate::sync::setup_event_handler(&conn, state.store.clone(), state.selected_ids);
                     state.connection.set(Some(conn.clone()));
                     // Attempt to create the default room (fails gracefully if it exists).
                     let room_args = spacetimedb_lib::bsatn::to_vec(&("default".to_string(),)).unwrap();
@@ -70,9 +70,12 @@ fn App() -> impl IntoView {
     #[cfg(debug_assertions)]
     {
         let store = state.store.clone();
+        let sel = state.selected_ids;
         Effect::new(move |_| {
             let elem_count = store.elements.with(|e| e.len());
             let cursor_count = store.cursors.with(|c| c.len());
+            let elem_ids: Vec<f64> = store.elements.with(|e| e.keys().map(|&k| k as f64).collect());
+            let sel_ids: Vec<f64> = sel.with(|s| s.iter().map(|&k| k as f64).collect());
 
             let global = js_sys::global();
             js_sys::Reflect::set(
@@ -85,6 +88,21 @@ fn App() -> impl IntoView {
                 &global,
                 &wasm_bindgen::JsValue::from_str("__TEST_CURSOR_COUNT"),
                 &wasm_bindgen::JsValue::from_f64(cursor_count as f64),
+            )
+            .ok();
+            // Expose element IDs and selected IDs as JSON strings
+            let ids_json = format!("{:?}", elem_ids);
+            js_sys::Reflect::set(
+                &global,
+                &wasm_bindgen::JsValue::from_str("__TEST_ELEMENT_IDS"),
+                &wasm_bindgen::JsValue::from_str(&ids_json),
+            )
+            .ok();
+            let sel_json = format!("{:?}", sel_ids);
+            js_sys::Reflect::set(
+                &global,
+                &wasm_bindgen::JsValue::from_str("__TEST_SELECTED_IDS"),
+                &wasm_bindgen::JsValue::from_str(&sel_json),
             )
             .ok();
         });
