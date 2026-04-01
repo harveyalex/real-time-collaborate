@@ -17,6 +17,10 @@ pub enum VimAction {
     CommandSubmit(String),
     CommandBackspace,
     ToggleHelp,
+    CreateAtCenter,
+    SelectNext,
+    ZoomIn,
+    ZoomOut,
 }
 
 pub struct VimStateMachine {
@@ -150,6 +154,18 @@ impl VimStateMachine {
                 self.mode = VimMode::Command;
                 VimAction::EnterCommand
             }
+            "Tab" => {
+                self.key_buffer.clear();
+                VimAction::SelectNext
+            }
+            "+" | "=" => {
+                self.key_buffer.clear();
+                VimAction::ZoomIn
+            }
+            "-" => {
+                self.key_buffer.clear();
+                VimAction::ZoomOut
+            }
             "?" => VimAction::ToggleHelp,
             "Escape" => {
                 self.key_buffer.clear();
@@ -165,6 +181,7 @@ impl VimStateMachine {
                 self.mode = VimMode::Normal;
                 VimAction::SetTool(Tool::Select)
             }
+            "Enter" => VimAction::CreateAtCenter,
             _ => VimAction::None,
         }
     }

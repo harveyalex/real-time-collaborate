@@ -1,7 +1,12 @@
+use std::sync::{Arc, Mutex};
+
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
 use stdb_client::StdbStore;
+use stdb_client::ElementData;
 use stdb_client::connection::StdbConnection;
+
+use crate::tools::ToolHandler;
 
 pub use crate::types::{VimMode, Tool};
 
@@ -39,6 +44,8 @@ pub struct AppState {
     pub mouse_pos: RwSignal<(f64, f64)>,
     pub canvas_size: RwSignal<(f64, f64)>,
     pub show_help: RwSignal<bool>,
+    pub tool_handler: Arc<Mutex<ToolHandler>>,
+    pub clipboard: RwSignal<Vec<ElementData>>,
 }
 
 impl AppState {
@@ -58,6 +65,8 @@ impl AppState {
             mouse_pos: RwSignal::new((0.0, 0.0)),
             canvas_size: RwSignal::new((0.0, 0.0)),
             show_help: RwSignal::new(false),
+            tool_handler: Arc::new(Mutex::new(ToolHandler::new())),
+            clipboard: RwSignal::new(vec![]),
         }
     }
 

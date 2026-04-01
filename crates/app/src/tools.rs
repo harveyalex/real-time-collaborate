@@ -13,7 +13,7 @@ use crate::state::AppState;
 use crate::types::{Tool, VimMode};
 
 /// Generate a locally-unique element ID from timestamp + random.
-fn generate_local_id() -> u64 {
+pub fn generate_local_id() -> u64 {
     let now = js_sys::Date::now() as u64;
     let random = (js_sys::Math::random() * 1_000_000.0) as u64;
     now * 1_000_000 + random
@@ -342,7 +342,7 @@ fn hit_test_element(elem: &ElementData, wx: f64, wy: f64) -> bool {
 // ---------------------------------------------------------------------------
 
 /// Send element to server. Returns true if connected (element will arrive via subscription).
-fn sync_element_to_server(state: &AppState, elem: &ElementData) -> bool {
+pub fn sync_element_to_server(state: &AppState, elem: &ElementData) -> bool {
     let conn = state.connection.get_untracked();
     if let Some(conn) = conn {
         let points_bytes = shared::encode_points(&elem.points);
@@ -373,14 +373,14 @@ fn sync_element_to_server(state: &AppState, elem: &ElementData) -> bool {
 // Element creation helpers
 // ---------------------------------------------------------------------------
 
-fn next_z_index(state: &AppState) -> i32 {
+pub fn next_z_index(state: &AppState) -> i32 {
     state
         .store
         .elements
         .with_untracked(|elems| elems.values().map(|e| e.z_index).max().unwrap_or(0) + 1)
 }
 
-fn create_shape_element(state: &AppState, kind: ElementKind, x: f64, y: f64, w: f64, h: f64) {
+pub fn create_shape_element(state: &AppState, kind: ElementKind, x: f64, y: f64, w: f64, h: f64) {
     let id = generate_local_id();
     let room_id = state.store.current_room.get_untracked().unwrap_or(0);
     let z = next_z_index(state);
@@ -407,7 +407,7 @@ fn create_shape_element(state: &AppState, kind: ElementKind, x: f64, y: f64, w: 
     state.selected_ids.set(vec![id]);
 }
 
-fn create_line_element(state: &AppState, kind: ElementKind, points: &[Point]) {
+pub fn create_line_element(state: &AppState, kind: ElementKind, points: &[Point]) {
     let id = generate_local_id();
     let room_id = state.store.current_room.get_untracked().unwrap_or(0);
     let z = next_z_index(state);
@@ -436,7 +436,7 @@ fn create_line_element(state: &AppState, kind: ElementKind, points: &[Point]) {
     }
 }
 
-fn create_text_element(state: &AppState, x: f64, y: f64, text: &str) {
+pub fn create_text_element(state: &AppState, x: f64, y: f64, text: &str) {
     let id = generate_local_id();
     let room_id = state.store.current_room.get_untracked().unwrap_or(0);
     let z = next_z_index(state);

@@ -1,6 +1,14 @@
-use leptos::prelude::{GetUntracked, Set, Update};
+use leptos::prelude::{GetUntracked, Set, Update, WithUntracked};
 
-use crate::state::AppState;
+use shared::point::Point;
+use shared::ElementKind;
+use stdb_client::ElementData;
+
+use crate::state::{AppState, Tool};
+use crate::tools::{
+    create_shape_element, create_line_element,
+    generate_local_id, next_z_index, sync_element_to_server, DrawingState,
+};
 use crate::vim::VimAction;
 
 /// Process a VimAction and apply it to the app state.
@@ -32,20 +40,57 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
             state.selected_ids.update(|ids: &mut Vec<u64>| ids.clear());
         }
         VimAction::CopySelected => {
-            // TODO: copy selected elements to clipboard signal
-            log::debug!("Copy selected");
+            let selected = state.selected_ids.get_untracked();
+            let copied: Vec<ElementData> = state.store.elements.with_untracked(|elems| {
+                selected.iter().filter_map(|id| elems.get(id).cloned()).collect()
+            });
+            state.clipboard.set(copied);
         }
         VimAction::Paste => {
-            // TODO: paste from clipboard signal
-            log::debug!("Paste");
+            let clipboard = state.clipboard.get_untracked();
+            let mut new_ids = vec![];
+            for elem in &clipboard {
+                let id = generate_local_id();
+                let z = next_z_index(state);
+                let new_elem = ElementData {
+                    id,
+                    room_id: elem.room_id,
+                    kind: elem.kind,
+                    x: elem.x + 20.0,
+                    y: elem.y + 20.0,
+                    width: elem.width,
+                    height: elem.height,
+                    rotation: elem.rotation,
+                    points: elem.points.clone(),
+                    stroke_color: elem.stroke_color,
+                    fill_color: elem.fill_color,
+                    stroke_width: elem.stroke_width,
+                    opacity: elem.opacity,
+                    font_size: elem.font_size,
+                    text_content: elem.text_content.clone(),
+                    z_index: z,
+                };
+                sync_element_to_server(state, &new_elem);
+                state.store.elements.update(|elems| { elems.insert(id, new_elem); });
+                new_ids.push(id);
+            }
+            if !new_ids.is_empty() {
+                state.selected_ids.set(new_ids);
+            }
         }
         VimAction::Undo => {
-            // TODO: call undo reducer
-            log::debug!("Undo");
+            if let Some(conn) = state.connection.get_untracked() {
+                let room_id = state.store.current_room.get_untracked().unwrap_or(1);
+                let args = spacetimedb_lib::bsatn::to_vec(&(room_id,)).unwrap();
+                conn.call_reducer("undo", args);
+            }
         }
         VimAction::Redo => {
-            // TODO: call redo reducer
-            log::debug!("Redo");
+            if let Some(conn) = state.connection.get_untracked() {
+                let room_id = state.store.current_room.get_untracked().unwrap_or(1);
+                let args = spacetimedb_lib::bsatn::to_vec(&(room_id,)).unwrap();
+                conn.call_reducer("redo", args);
+            }
         }
         VimAction::EnterCommand => {
             state.mode.set(crate::state::VimMode::Command);
@@ -59,6 +104,48 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
         }
         VimAction::ToggleHelp => {
             state.show_help.update(|v| *v = !*v);
+        }
+        VimAction::CreateAtCenter => {
+            let tool = state.tool.get_untracked();
+            let (cw, ch) = state.canvas_size.get_untracked();
+            let (cx, cy) = state.screen_to_world(cw / 2.0, ch / 2.0);
+            match tool {
+                Tool::Rectangle => {
+                    create_shape_element(state, ElementKind::Rectangle, cx - 50.0, cy - 30.0, 100.0, 60.0);
+                }
+                Tool::Ellipse => {
+                    create_shape_element(state, ElementKind::Ellipse, cx - 50.0, cy - 30.0, 100.0, 60.0);
+                }
+                Tool::Text => {
+                    let mut th = state.tool_handler.lock().unwrap();
+                    th.drawing = DrawingState::TextInput { x: cx, y: cy, text: String::new() };
+                }
+                Tool::Arrow | Tool::Line => {
+                    let kind = if tool == Tool::Arrow { ElementKind::Arrow } else { ElementKind::Line };
+                    let points = vec![Point { x: cx - 50.0, y: cy }, Point { x: cx + 50.0, y: cy }];
+                    create_line_element(state, kind, &points);
+                }
+                _ => {}
+            }
+        }
+        VimAction::SelectNext => {
+            let current = state.selected_ids.get_untracked();
+            let elements = state.store.sorted_elements();
+            if !elements.is_empty() {
+                let current_idx = if let Some(&id) = current.first() {
+                    elements.iter().position(|e| e.id == id).map(|i| i + 1).unwrap_or(0)
+                } else {
+                    0
+                };
+                let next_idx = current_idx % elements.len();
+                state.selected_ids.set(vec![elements[next_idx].id]);
+            }
+        }
+        VimAction::ZoomIn => {
+            state.camera.update(|cam| { cam.zoom = (cam.zoom * 1.2).clamp(0.1, 10.0); });
+        }
+        VimAction::ZoomOut => {
+            state.camera.update(|cam| { cam.zoom = (cam.zoom / 1.2).clamp(0.1, 10.0); });
         }
         VimAction::CommandChar(_) | VimAction::CommandBackspace => {
             // Command buffer is managed by VimStateMachine

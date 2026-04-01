@@ -116,9 +116,36 @@ fn App() -> impl IntoView {
         let vim = vim_clone.clone();
         let state = state_for_keys.clone();
         let closure = Closure::<dyn FnMut(_)>::new(move |ev: web_sys::KeyboardEvent| {
+            let key = ev.key();
+
+            // In Insert mode with Text tool and active TextInput, route keys
+            // to the text handler instead of the vim state machine.
+            {
+                use leptos::prelude::GetUntracked;
+                let mode = state.mode.get_untracked();
+                let tool = state.tool.get_untracked();
+                if mode == crate::types::VimMode::Insert && tool == crate::types::Tool::Text {
+                    let is_text_input = {
+                        let th = state.tool_handler.lock().unwrap();
+                        matches!(th.drawing, crate::tools::DrawingState::TextInput { .. })
+                    };
+                    if is_text_input {
+                        if key == "Escape" {
+                            // Commit text before vim handles the Escape
+                            state.tool_handler.lock().unwrap().on_text_key(&state, "Escape");
+                            // Fall through to vim to exit Insert mode
+                        } else {
+                            state.tool_handler.lock().unwrap().on_text_key(&state, &key);
+                            ev.prevent_default();
+                            return;
+                        }
+                    }
+                }
+            }
+
             let action = {
                 let mut vm = vim.borrow_mut();
-                let action = vm.handle_key(&ev.key(), ev.shift_key(), ev.ctrl_key());
+                let action = vm.handle_key(&key, ev.shift_key(), ev.ctrl_key());
                 state.mode.set(vm.mode());
                 state.key_buffer.set(vm.key_buffer().to_string());
                 state.command_buffer.set(vm.command_buffer().to_string());

@@ -12,7 +12,6 @@ use shared::ElementKind;
 use stdb_client::ElementData;
 
 use crate::state::AppState;
-use crate::tools::ToolHandler;
 
 /// Convert a packed RGBA u32 to a CSS `rgba()` string.
 pub fn color_u32_to_css(color: u32) -> String {
@@ -221,7 +220,7 @@ pub fn DrawCanvas() -> impl IntoView {
     let state = expect_context::<AppState>();
     let canvas_ref = NodeRef::<html::Canvas>::new();
 
-    let tool_handler = Rc::new(RefCell::new(ToolHandler::new()));
+    let tool_handler = state.tool_handler.clone();
 
     // Set up the render loop and event handlers once the canvas is mounted.
     Effect::new({
@@ -267,7 +266,7 @@ pub fn DrawCanvas() -> impl IntoView {
                 let cam = state_inner.camera.get_untracked();
                 ctx.scale(cam.zoom, cam.zoom).unwrap_or(());
                 ctx.translate(-cam.x, -cam.y).unwrap_or(());
-                tool_handler_render.borrow().render_preview(&ctx, &state_inner);
+                tool_handler_render.lock().unwrap().render_preview(&ctx, &state_inner);
                 ctx.restore();
 
                 // Request next frame.
@@ -294,7 +293,7 @@ pub fn DrawCanvas() -> impl IntoView {
     let tool_handler_down = tool_handler.clone();
     let on_mousedown = move |ev: web_sys::MouseEvent| {
         let (wx, wy) = state_mouse.screen_to_world(ev.offset_x() as f64, ev.offset_y() as f64);
-        tool_handler_down.borrow_mut().on_mouse_down(&state_mouse, wx, wy);
+        tool_handler_down.lock().unwrap().on_mouse_down(&state_mouse, wx, wy);
     };
 
     let state_move = state.clone();
@@ -305,7 +304,7 @@ pub fn DrawCanvas() -> impl IntoView {
         let sy = ev.offset_y() as f64;
         state_move.mouse_pos.set((sx, sy));
         let (wx, wy) = state_move.screen_to_world(sx, sy);
-        tool_handler_move.borrow_mut().on_mouse_move(&state_move, wx, wy);
+        tool_handler_move.lock().unwrap().on_mouse_move(&state_move, wx, wy);
 
         // Throttled cursor update to server (~20fps = every 50ms)
         let now = js_sys::Date::now();
@@ -324,7 +323,7 @@ pub fn DrawCanvas() -> impl IntoView {
     let tool_handler_up = tool_handler.clone();
     let on_mouseup = move |ev: web_sys::MouseEvent| {
         let (wx, wy) = state_up.screen_to_world(ev.offset_x() as f64, ev.offset_y() as f64);
-        tool_handler_up.borrow_mut().on_mouse_up(&state_up, wx, wy);
+        tool_handler_up.lock().unwrap().on_mouse_up(&state_up, wx, wy);
     };
 
     let state_wheel = state.clone();
