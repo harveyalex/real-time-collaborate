@@ -6,7 +6,7 @@ use stdb_client::ElementData;
 
 use crate::state::{AppState, Tool};
 use crate::tools::{
-    create_shape_element, create_line_element,
+    create_shape_element, create_line_element, create_freehand_element,
     generate_local_id, next_z_index, sync_element_to_server, DrawingState,
 };
 use crate::vim::VimAction;
@@ -16,6 +16,20 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
     match action {
         VimAction::None => {}
         VimAction::SetTool(tool) => {
+            // Commit any in-progress freehand before switching tools
+            {
+                let mut th = state.tool_handler.lock().unwrap();
+                if let DrawingState::FreehandDraw { points } = &th.drawing {
+                    if points.len() >= 2 {
+                        let pts = points.clone();
+                        th.drawing = DrawingState::None;
+                        drop(th);
+                        create_freehand_element(state, &pts);
+                    } else {
+                        th.drawing = DrawingState::None;
+                    }
+                }
+            }
             state.tool.set(tool);
         }
         VimAction::MoveSelected(dx, dy) => {
@@ -27,6 +41,12 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
                 pos.0 += dx;
                 pos.1 += dy;
             });
+            // If freehand drawing, append new cursor position to path
+            let mut th = state.tool_handler.lock().unwrap();
+            if let DrawingState::FreehandDraw { ref mut points } = th.drawing {
+                let (nx, ny) = state.vim_cursor.get_untracked();
+                points.push(Point { x: nx, y: ny });
+            }
         }
         VimAction::SelectAtCursor => {
             let (cx, cy) = state.vim_cursor.get_untracked();
@@ -114,6 +134,25 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
             state.mode.set(crate::state::VimMode::Visual);
         }
         VimAction::ExitToNormal => {
+            // Commit any in-progress drawing before exiting
+            {
+                let mut th = state.tool_handler.lock().unwrap();
+                match &th.drawing {
+                    DrawingState::FreehandDraw { points } if points.len() >= 2 => {
+                        let pts = points.clone();
+                        th.drawing = DrawingState::None;
+                        drop(th);
+                        create_freehand_element(state, &pts);
+                    }
+                    DrawingState::LinePlacement { points } if !points.is_empty() => {
+                        // Discard incomplete line on Escape
+                        th.drawing = DrawingState::None;
+                    }
+                    _ => {
+                        th.drawing = DrawingState::None;
+                    }
+                }
+            }
             state.mode.set(crate::state::VimMode::Normal);
             state.selected_ids.update(|ids: &mut Vec<u64>| ids.clear());
         }
@@ -149,6 +188,24 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
                         _ => {
                             // First Enter: start at vim cursor
                             th.drawing = DrawingState::LinePlacement {
+                                points: vec![Point { x: cx, y: cy }],
+                            };
+                        }
+                    }
+                }
+                Tool::Freehand => {
+                    let mut th = state.tool_handler.lock().unwrap();
+                    match &th.drawing {
+                        DrawingState::FreehandDraw { points } if points.len() >= 2 => {
+                            // Enter while drawing: commit current stroke
+                            let pts = points.clone();
+                            th.drawing = DrawingState::None;
+                            drop(th);
+                            create_freehand_element(state, &pts);
+                        }
+                        _ => {
+                            // First Enter: start recording freehand at vim cursor
+                            th.drawing = DrawingState::FreehandDraw {
                                 points: vec![Point { x: cx, y: cy }],
                             };
                         }

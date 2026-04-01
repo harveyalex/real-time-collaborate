@@ -469,7 +469,7 @@ pub fn create_text_element(state: &AppState, x: f64, y: f64, text: &str) {
     }
 }
 
-fn create_freehand_element(state: &AppState, points: &[Point]) {
+pub fn create_freehand_element(state: &AppState, points: &[Point]) {
     let id = generate_local_id();
     let room_id = state.store.current_room.get_untracked().unwrap_or(0);
     let z = next_z_index(state);
