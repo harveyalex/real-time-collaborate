@@ -23,6 +23,9 @@ pub enum VimAction {
     SelectNext,
     ZoomIn,
     ZoomOut,
+    ResizeSelected(f64, f64),
+    RotateSelected(f64),
+    PanCamera(f64, f64),
 }
 
 pub struct VimStateMachine {
@@ -68,8 +71,20 @@ impl VimStateMachine {
             return VimAction::Redo;
         }
 
-        // hjkl: shift = move selected element, no shift = move vim cursor
+        // Ctrl+hjkl: pan camera
         let key_lower = key.to_ascii_lowercase();
+        if ctrl && matches!(key_lower.as_str(), "h" | "j" | "k" | "l") {
+            self.key_buffer.clear();
+            return match key_lower.as_str() {
+                "h" => VimAction::PanCamera(-50.0, 0.0),
+                "j" => VimAction::PanCamera(0.0, 50.0),
+                "k" => VimAction::PanCamera(0.0, -50.0),
+                "l" => VimAction::PanCamera(50.0, 0.0),
+                _ => unreachable!(),
+            };
+        }
+
+        // hjkl: shift = move selected element, no shift = move vim cursor
         if matches!(key_lower.as_str(), "h" | "j" | "k" | "l") && !ctrl {
             self.key_buffer.clear();
             if shift {
@@ -173,6 +188,30 @@ impl VimStateMachine {
                 self.key_buffer.clear();
                 VimAction::ZoomOut
             }
+            ">" => {
+                self.key_buffer.clear();
+                VimAction::ResizeSelected(10.0, 0.0)
+            }
+            "<" => {
+                self.key_buffer.clear();
+                VimAction::ResizeSelected(-10.0, 0.0)
+            }
+            "}" => {
+                self.key_buffer.clear();
+                VimAction::ResizeSelected(0.0, 10.0)
+            }
+            "{" => {
+                self.key_buffer.clear();
+                VimAction::ResizeSelected(0.0, -10.0)
+            }
+            "(" => {
+                self.key_buffer.clear();
+                VimAction::RotateSelected(std::f64::consts::PI / 12.0)
+            }
+            ")" => {
+                self.key_buffer.clear();
+                VimAction::RotateSelected(-std::f64::consts::PI / 12.0)
+            }
             "?" => VimAction::ToggleHelp,
             "Escape" => {
                 self.key_buffer.clear();
@@ -189,6 +228,15 @@ impl VimStateMachine {
                 VimAction::SetTool(Tool::Select)
             }
             "Enter" => VimAction::CreateAtCenter,
+            "h" | "j" | "k" | "l" => {
+                match key {
+                    "h" => VimAction::MoveCursor(-20.0, 0.0),
+                    "j" => VimAction::MoveCursor(0.0, 20.0),
+                    "k" => VimAction::MoveCursor(0.0, -20.0),
+                    "l" => VimAction::MoveCursor(20.0, 0.0),
+                    _ => VimAction::None,
+                }
+            }
             _ => VimAction::None,
         }
     }

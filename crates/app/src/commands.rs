@@ -135,9 +135,24 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
                     th.drawing = DrawingState::TextInput { x: cx, y: cy, text: String::new() };
                 }
                 Tool::Arrow | Tool::Line => {
-                    let kind = if tool == Tool::Arrow { ElementKind::Arrow } else { ElementKind::Line };
-                    let points = vec![Point { x: cx - 50.0, y: cy }, Point { x: cx + 50.0, y: cy }];
-                    create_line_element(state, kind, &points);
+                    let mut th = state.tool_handler.lock().unwrap();
+                    match &th.drawing {
+                        DrawingState::LinePlacement { points } if !points.is_empty() => {
+                            // Second Enter: finish at vim cursor
+                            let mut pts = points.clone();
+                            pts.push(Point { x: cx, y: cy });
+                            let kind = if tool == Tool::Arrow { ElementKind::Arrow } else { ElementKind::Line };
+                            th.drawing = DrawingState::None;
+                            drop(th); // release lock before calling create
+                            create_line_element(state, kind, &pts);
+                        }
+                        _ => {
+                            // First Enter: start at vim cursor
+                            th.drawing = DrawingState::LinePlacement {
+                                points: vec![Point { x: cx, y: cy }],
+                            };
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -160,6 +175,33 @@ pub fn handle_vim_action(state: &AppState, action: VimAction) {
         }
         VimAction::ZoomOut => {
             state.camera.update(|cam| { cam.zoom = (cam.zoom / 1.2).clamp(0.1, 10.0); });
+        }
+        VimAction::ResizeSelected(dw, dh) => {
+            let selected = state.selected_ids.get_untracked();
+            state.store.elements.update(|elems| {
+                for &id in &selected {
+                    if let Some(elem) = elems.get_mut(&id) {
+                        elem.width = (elem.width + dw).max(10.0);
+                        elem.height = (elem.height + dh).max(10.0);
+                    }
+                }
+            });
+        }
+        VimAction::RotateSelected(angle) => {
+            let selected = state.selected_ids.get_untracked();
+            state.store.elements.update(|elems| {
+                for &id in &selected {
+                    if let Some(elem) = elems.get_mut(&id) {
+                        elem.rotation += angle;
+                    }
+                }
+            });
+        }
+        VimAction::PanCamera(dx, dy) => {
+            state.camera.update(|cam| {
+                cam.x += dx;
+                cam.y += dy;
+            });
         }
         VimAction::CommandChar(_) | VimAction::CommandBackspace => {
             // Command buffer is managed by VimStateMachine

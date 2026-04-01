@@ -72,6 +72,7 @@ fn App() -> impl IntoView {
         let store = state.store.clone();
         let sel = state.selected_ids;
         let vim_cursor = state.vim_cursor;
+        let camera = state.camera;
         Effect::new(move |_| {
             let elem_count = store.elements.with(|e| e.len());
             let cursor_count = store.cursors.with(|c| c.len());
@@ -106,6 +107,10 @@ fn App() -> impl IntoView {
                 &wasm_bindgen::JsValue::from_str(&sel_json),
             )
             .ok();
+
+            let cam = camera.with(|c| (c.x, c.y, c.zoom));
+            let cam_json = format!("{{\"x\":{},\"y\":{},\"zoom\":{}}}", cam.0, cam.1, cam.2);
+            js_sys::Reflect::set(&global, &wasm_bindgen::JsValue::from_str("__TEST_CAMERA"), &wasm_bindgen::JsValue::from_str(&cam_json)).ok();
 
             let (vcx, vcy) = vim_cursor.with(|&(x, y)| (x, y));
             let cursor_json = format!("{{\"x\":{},\"y\":{}}}", vcx, vcy);
