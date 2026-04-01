@@ -1,10 +1,9 @@
 # Stage 1: Build the WASM app with Trunk
-FROM rust:1.82 AS builder
+FROM rust:1.86 AS builder
 
-# Install wasm target and trunk
+# Install wasm target and trunk (trunk downloads wasm-bindgen-cli automatically)
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install trunk --locked
-RUN cargo install wasm-bindgen-cli --locked
 
 WORKDIR /app
 COPY . .
