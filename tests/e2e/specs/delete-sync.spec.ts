@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForConnected, waitForElementCount, drawRectangle } from '../helpers';
+import { waitForConnected, waitForElementCountChange, getElementCount, drawRectangle } from '../helpers';
 
 test.describe('Delete Sync', () => {
   test('deleting an element in browser A removes it from browser B', async ({ browser }) => {
@@ -14,9 +14,17 @@ test.describe('Delete Sync', () => {
       await waitForConnected(pageA);
       await waitForConnected(pageB);
 
+      await pageA.waitForTimeout(1000);
+      const baseA = await getElementCount(pageA);
+      const baseB = await getElementCount(pageB);
+
+      // Draw rectangle in A
       await drawRectangle(pageA, 100, 100, 200, 150);
-      await waitForElementCount(pageA, 1);
-      await waitForElementCount(pageB, 1, 15_000);
+      await waitForElementCountChange(pageA, baseA, 1);
+      await waitForElementCountChange(pageB, baseB, 1, 15_000);
+
+      const afterDrawA = await getElementCount(pageA);
+      const afterDrawB = await getElementCount(pageB);
 
       const canvasA = pageA.locator('canvas');
       const boxA = await canvasA.boundingBox();
@@ -33,8 +41,9 @@ test.describe('Delete Sync', () => {
       await pageA.keyboard.press('d');
       await pageA.waitForTimeout(200);
 
-      await waitForElementCount(pageA, 0, 5_000);
-      await waitForElementCount(pageB, 0, 15_000);
+      // Element count should decrease by 1 in both
+      await waitForElementCountChange(pageA, afterDrawA, -1, 5_000);
+      await waitForElementCountChange(pageB, afterDrawB, -1, 15_000);
     } finally {
       await contextA.close();
       await contextB.close();

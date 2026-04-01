@@ -20,6 +20,32 @@ export async function waitForElementCount(
   );
 }
 
+export async function waitForElementCountAtLeast(
+  page: Page,
+  minCount: number,
+  timeout = 10_000,
+): Promise<void> {
+  await page.waitForFunction(
+    (min) => ((window as any).__TEST_ELEMENT_COUNT ?? 0) >= min,
+    minCount,
+    { timeout },
+  );
+}
+
+export async function waitForElementCountChange(
+  page: Page,
+  baseline: number,
+  delta: number,
+  timeout = 10_000,
+): Promise<void> {
+  const target = baseline + delta;
+  await page.waitForFunction(
+    (expected) => (window as any).__TEST_ELEMENT_COUNT === expected,
+    target,
+    { timeout },
+  );
+}
+
 export async function waitForCursorCount(
   page: Page,
   minCount: number,

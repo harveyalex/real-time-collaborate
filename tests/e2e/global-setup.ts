@@ -34,20 +34,20 @@ async function globalSetup() {
   });
 
   console.log('Publishing server module...');
-  execSync('spacetime publish -s local collaborate -p crates/server -c=on-conflict --yes', {
+  execSync('spacetime publish -s local collaborate -p crates/server -c=always --yes', {
     cwd: PROJECT_ROOT,
     stdio: 'inherit',
   });
 
   console.log('Starting Trunk dev server...');
-  const trunk = spawn('trunk', ['serve', '--port', '8080'], {
+  const trunk = spawn('trunk', ['serve', '--port', '8090'], {
     cwd: path.join(PROJECT_ROOT, 'crates/app'),
     stdio: 'pipe',
     detached: true,
   });
   trunk.unref();
 
-  await waitForUrl('http://localhost:8080', 60_000);
+  await waitForUrl('http://localhost:8090', 60_000);
 
   fs.writeFileSync(PID_FILE, JSON.stringify({
     spacetime: spacetime.pid,

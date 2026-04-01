@@ -8,7 +8,7 @@ export default defineConfig({
   globalSetup: './global-setup.ts',
   globalTeardown: './global-teardown.ts',
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:8090',
     trace: 'on-first-retry',
   },
   projects: [

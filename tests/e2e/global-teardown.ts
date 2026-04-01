@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -6,6 +7,7 @@ const PID_FILE = path.join(__dirname, '.test-pids.json');
 function killProcess(pid: number | undefined) {
   if (!pid) return;
   try {
+    // Try killing the process group first (macOS/Linux)
     process.kill(-pid, 'SIGTERM');
   } catch {
     try {
@@ -25,6 +27,14 @@ async function globalTeardown() {
     fs.unlinkSync(PID_FILE);
   } catch {
     // PID file may not exist if setup failed
+  }
+
+  // Belt and suspenders: also kill by port
+  try {
+    execSync('lsof -ti :8090 | xargs kill -9 2>/dev/null || true', { stdio: 'pipe' });
+    execSync('lsof -ti :3000 | xargs kill -9 2>/dev/null || true', { stdio: 'pipe' });
+  } catch {
+    // ignore
   }
 }
 
